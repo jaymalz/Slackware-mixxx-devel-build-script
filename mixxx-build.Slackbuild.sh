@@ -45,8 +45,8 @@
    exit 1
 fi
   
- if [ -f /var/log/packages/ffmpeg-* ]; then
-     FFMPG="ffmpeg-*" 
+ if [ -f /usr/bin/ffmpeg ]; then
+     FFMPG="ffmpeg" 
  else
    echo -e "\e[1;33m you must install ffmpeg.\e[0m"   
   echo -e "\e[1;33m http://www.slackware.com/~alien/slackbuilds/ffmpeg .\e[0m" 
@@ -57,7 +57,7 @@ fi
 INST=1
 
 # This is where all the compilation and final results will be placed
-TMP=${TMP:-/tmp}
+TMP=${TMP:-/tmp/mixxx/pkgs}
 
 # This is the original directory where you started this script
 MIXXXROOT=$(pwd)
@@ -65,17 +65,22 @@ MIXXXROOT=$(pwd)
 # Loop for all packages
 for dir in \
   buildmixxx/set_rlimits \
+  buildmixxx/speex \
+  buildmixxx/libebur128 \
+  buildmixxx/QUSB \
   buildmixxx/opus \
+  buildmixxx/opusfile \
+  buildmixxx/hidapi \
   buildmixxx/faad2 \
+  buildmixxx/soundtouch \
   buildmixxx/libmp4v2 \
   buildmixxx/id3lib \
   buildmixxx/pytz \
   buildmixxx/pysetuptools \
   buildmixxx/python-gflags \
   buildmixxx/six \
+  buildmixxx/google-apputils \
   buildmixxx/python-dateutil\
-  buildmixxx/speex \
-  buildmixxx/jack-audio-connection-kit \
   buildmixxx/jack2 \
   buildmixxx/lame \
   buildmixxx/protobuf \
@@ -86,6 +91,9 @@ for dir in \
   buildmixxx/portmidi \
   buildmixxx/vamp-plugin-sdk \
   buildmixxx/rubberband \
+  buildmixxx/pulseaudio \
+  buildmixxx/alsa-plugins \
+  buildmixxx/qjackctl \
   buildmixxx/mixxx \
   ; do
   # Get the package name
@@ -109,7 +117,7 @@ for dir in \
   # The real build starts here
   sh ${package}.SlackBuild || exit 1
   if [ "$INST" = "1" ]; then
-    PACKAGE="${package}-$version-*.tgz"
+    PACKAGE="${package}-$version-*.t?z"
     if [ -f $TMP/$PACKAGE ]; then
       upgradepkg --install-new --reinstall $TMP/$PACKAGE
     else

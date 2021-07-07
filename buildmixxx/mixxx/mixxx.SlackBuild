@@ -24,11 +24,9 @@
 
 
 PRGNAM=mixxx
-VERSION=${VERSION:-2.1.dev}
-BUILD=${BUILD:-1}
-TAG=${TAG:-_DRKo}
-# set REV to any revision you want or it builds master tip
-REV=master
+VERSION=${VERSION:-2.1.8}
+BUILD=${BUILD:-2}
+TAG=${TAG:-_drakeo}
 
 # number of jobs set to your cpu cores
 NPROC=$(nproc)
@@ -41,7 +39,7 @@ NPROC=$(nproc)
 #  6  K8/Opteron/AMD64
 #  7  K8/Opteron/AMD64 w/ SSE3  my default
 #
-OPTIMIZE=${OPTIMIZE:-" optimize=native "}
+OPTIMIZE=${OPTIMIZE:-"optimize=portable"}
 
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
@@ -52,26 +50,25 @@ if [ -z "$ARCH" ]; then
 fi
 
 CWD=$(pwd)
-TMP=${TMP:-/tmp/SBo}
+TMP=${TMP:-/tmp/mixxx}
 PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
+OUTPUT=${OUTPUT:-/tmp/mixxx/pkgs}
 
-
-if [ -d $CWD/$PRGNAM ]
-then
-cd $CWD/$PRGNAM
-  git pull
+if [ -f $CWD/$PRGNAM-$VERSION.tar.gz ]; then
+ echo $PRGNAM-$VERSION.tar.gz built
 else
-  git clone https://github.com/mixxxdj/mixxx.git
+	git clone https://github.com/mixxxdj/mixxx.git
+	cd $CWD/$PRGNAM
+	git fetch --all
+	git pull --all
+	git checkout release-$VERSION
+	sed -i 's/Exec=sh -c "pasuspender -- mixxx || mixxx"/Exec=set_rlimits -r mixxx/g' res/linux/mixxx.desktop
+	cd $CWD
+	mv  $PRGNAM  $PRGNAM-$VERSION
+	tar cvf  $PRGNAM-$VERSION.tar.gz $PRGNAM-$VERSION
+	rm -rf $PRGNAM-$VERSION
 fi
-cd $CWD/$PRGNAM
-git checkout  $REV 
-cd $CWD
 
-cp -rf mixxx/ mixxx-2.1.dev
-tar cvf  mixxx-2.1.dev.tar.gz mixxx-2.1.dev/
-sleep 3
-rm -rf mixxx-2.1.dev
 
 cd $CWD/$PRGNAM
 git checkout master
@@ -99,7 +96,7 @@ cd $TMP
 rm -rf $PRGNAM-$VERSION
 tar xvf $CWD/$PRGNAM-$VERSION.tar.gz
 sleep 3
-rm $CWD/$PRGNAM-$VERSION.tar.gz # want to make sure a fresh tarball everytime.
+
 cd $PRGNAM-$VERSION
 chown -R root:root .
 find . \
@@ -107,16 +104,17 @@ find . \
  -exec chmod 755 {} \; -o \
  \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
  -exec chmod 644 {} \;
-
- # Fix the desktop file
-patch -p0 < $CWD/desktop.diff
+ 
+export PKG_CONFIG_PATH=/usr/lib$LIBDIRSUFFIX/pkgconfig
 
 # it seems libshout isn't detected :(
   CFLAGS="$SLKCFLAGS" \
   QTDIR=/usr/lib$LIBDIRSUFFIX/ \
   LIBIR=/usr/lib$LIBDIRSUFFIX \
 scons  -j$NPROC $OPTIMIZE \
+  opus=1 \
   faad=1 \
+  vamp=1 \
   prefix=/usr \
   LIBIR=/usr/lib$LIBDIRSUFFIX \
   QTDIR=/usr/lib$LIBDIRSUFFIX \
@@ -145,9 +143,9 @@ if [ "$ARCH" = "x86_64" ]; then
 fi
 
  # Get the version
- REV=$(cat /tmp/SBo/mixxx-2.1.dev/src/build.h | head -n 2 | tail -1 | cut -c20-23)
+ GITREV=$(cat /tmp/mixxx/$PRGNAM-$VERSION/src/build.h | head -n 2 | tail -1 | cut -c20-23)
   
 cd $PKG
-/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$REV$TAG-$BUILD.${PKGTYPE:-tgz}
+/sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}
 
 

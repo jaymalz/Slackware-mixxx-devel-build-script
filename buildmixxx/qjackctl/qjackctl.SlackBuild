@@ -1,8 +1,10 @@
 #!/bin/sh
 
-# Slackware build script for jack-audio-connection-kit
+# Slackware build script for "qjackctl".
 
-# Copyright 2007-2014 Heinz Wiesinger, Amsterdam, The Netherlands
+# Copyright 2009, Erik W. Hanson, Minneapolis, MN, USA
+# Copyright 2012, James M. Brewster, Baltimore, MD, USA
+# Copyright 2014-2015 Marcel Saegebarth <marc@mos6581.de>
 # All rights reserved.
 #
 # Redistribution and use of this script, with or without modification, is
@@ -22,13 +24,10 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# Modified by Robby Workman <rworkman@slackbuilds.org>
-# No additional license terms added  :)
-
-PRGNAM=jack-audio-connection-kit
-VERSION=${VERSION:-0.124.1}
-BUILD=${BUILD:-1}
-TAG=${TAG:-_SBo}
+PRGNAM=qjackctl
+VERSION=${VERSION:-0.4.0}
+BUILD=${BUILD:-2}
+TAG=${TAG:-_drakeo}
 
 if [ -z "$ARCH" ]; then
   case "$( uname -m )" in
@@ -38,15 +37,12 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-wget -c http://jackaudio.org/downloads/jack-audio-connection-kit-0.124.1.tar.gz
-
-NUMJOBS=${NUMJOBS:-" -j8 "}
-
-
 CWD=$(pwd)
-TMP=${TMP:-/tmp/SBo}
+TMP=${TMP:-/tmp/mixxx}
 PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
+OUTPUT=${OUTPUT:-/tmp/mixxx/pkgs}
+
+wget -c https://s.mos6581.de/static/slackbuilds.org/sources/qjackctl-0.4.0.tar.gz
 
 if [ "$ARCH" = "i486" ]; then
   SLKCFLAGS="-O2 -march=i486 -mtune=i686"
@@ -62,7 +58,7 @@ else
   LIBDIRSUFFIX=""
 fi
 
-set -e
+set -eu
 
 rm -rf $PKG
 mkdir -p $TMP $PKG $OUTPUT
@@ -72,40 +68,55 @@ tar xvf $CWD/$PRGNAM-$VERSION.tar.gz
 cd $PRGNAM-$VERSION
 chown -R root:root .
 find -L . \
- \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 -o -perm 511 \) \
- -exec chmod 755 {} \; -o \
- \( -perm 666 -o -perm 664 -o -perm 600 -o -perm 444 -o -perm 440 -o -perm 400 \) \
- -exec chmod 644 {} \;
+ \( -perm 777 -o -perm 775 -o -perm 750 -o -perm 711 -o -perm 555 \
+  -o -perm 511 \) -exec chmod 755 {} \; -o \
+ \( -perm 666 -o -perm 664 -o -perm 640 -o -perm 600 -o -perm 444 \
+  -o -perm 440 -o -perm 400 \) -exec chmod 644 {} \;
+
+# Tell qmake about our SLKCFLAGS. Required to compile on x86_64
+# system. Thanks to Lyle Sigurdson <lyle@sent.com> on
+# linuxquestions.org for this patch.
+echo "QMAKE_CXXFLAGS_RELEASE=$SLKCFLAGS" >> qjackctl.pro.in
 
 CFLAGS="$SLKCFLAGS" \
-CXXFLAGS="$SLKCFLAGS" \
 ./configure \
   --prefix=/usr \
   --libdir=/usr/lib${LIBDIRSUFFIX} \
   --sysconfdir=/etc \
   --localstatedir=/var \
-  --with-html-dir=/usr/doc/$PRGNAM-$VERSION \
   --mandir=/usr/man \
-  --enable-optimize \
-  --with-default-tmpdir=/dev/shm \
-  --build=$ARCH-slackware-linux \
-  --host=$ARCH-slackware-linux
+  --docdir=/usr/doc/$PRGNAM-$VERSION \
+  --build=$ARCH-slackware-linux
 
-make $NUMJOBS || make
+make -j8
 make install DESTDIR=$PKG
 
-find $PKG | xargs file | grep -e "executable" -e "shared object" | grep ELF \
+find $PKG -print0 | xargs -0 file | grep -e "executable" -e "shared object" | grep ELF \
   | cut -f 1 -d : | xargs strip --strip-unneeded 2> /dev/null || true
 
 find $PKG/usr/man -type f -exec gzip -9 {} \;
 for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
 
+# Make sure we have a standard-compliant desktop file
+cat $CWD/qjackctl.desktop > $PKG/usr/share/applications/qjackctl.desktop
+cp -rf $CWD/pulse-jack-scripts $PKG/usr/share/qjackctl/pulse-jack-scripts
+
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
-cp -a AUTHORS COPYING* README TODO $PKG/usr/doc/$PRGNAM-$VERSION
+cp -a AUTHORS COPYING ChangeLog INSTALL README TODO TRANSLATORS \
+      $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild > $PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
 
 mkdir -p $PKG/install
 cat $CWD/slack-desc > $PKG/install/slack-desc
+cat $CWD/doinst.sh > $PKG/install/doinst.sh
+
+# Only add capability stuff if not disabled:
+if [ "${SETCAP:-no}" = "yes" ]; then
+  cat $CWD/setcap.sh >> $PKG/install/doinst.sh
+  # Only allow execution by audio group
+  chown root:audio $PKG/usr/bin/*
+  chmod 0750 $PKG/usr/bin/*
+fi
 
 cd $PKG
 /sbin/makepkg -l y -c n $OUTPUT/$PRGNAM-$VERSION-$ARCH-$BUILD$TAG.${PKGTYPE:-tgz}

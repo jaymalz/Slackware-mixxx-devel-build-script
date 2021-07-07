@@ -24,9 +24,9 @@
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 PRGNAM=lame
-VERSION=${VERSION:-3.99.5}
+VERSION=${VERSION:-3.100}
 BUILD=${BUILD:-1}
-TAG=${TAG:-_SBo}
+TAG=${TAG:-_drakeo}
 NPROC=$(nproc)
 
 if [ -z "$ARCH" ]; then
@@ -37,13 +37,13 @@ if [ -z "$ARCH" ]; then
   esac
 fi
 
-wget -c http://downloads.sourceforge.net/lame/lame-3.99.5.tar.gz
+wget -c http://downloads.sourceforge.net/lame/lame-3.100.tar.gz
 
 
 CWD=$(pwd)
-TMP=${TMP:-/tmp/SBo}
+TMP=${TMP:-/tmp/mixxx}
 PKG=$TMP/package-$PRGNAM
-OUTPUT=${OUTPUT:-/tmp}
+OUTPUT=${OUTPUT:-/tmp/mixxx/pkgs}
 
 if [ "$ARCH" = "i486" ]; then
   SLKCFLAGS="-O2 -march=i486 -mtune=i686"
